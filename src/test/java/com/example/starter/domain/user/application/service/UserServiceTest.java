@@ -9,7 +9,6 @@ import com.example.starter.domain.user.adapter.in.web.dto.UserRequest;
 import com.example.starter.domain.user.adapter.in.web.dto.UserResponse;
 import com.example.starter.domain.user.application.port.out.UserPort;
 import com.example.starter.domain.user.domain.User;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -52,8 +51,6 @@ class UserServiceTest {
         .password("encodedPassword")
         .name("테스트 사용자")
         .active(true)
-        .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
   }
 

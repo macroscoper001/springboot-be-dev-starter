@@ -10,7 +10,6 @@ import com.example.starter.domain.todo.adapter.in.web.dto.TodoResponse;
 import com.example.starter.domain.todo.application.port.out.TodoPort;
 import com.example.starter.domain.todo.domain.Todo;
 import com.example.starter.domain.todo.domain.TodoStatus;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,8 +48,6 @@ class TodoServiceTest {
         .description("테스트 설명")
         .status(TodoStatus.PENDING)
         .userId(1L)
-        .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
   }
 

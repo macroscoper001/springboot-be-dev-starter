@@ -28,10 +28,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 @DisplayName("할일 컨트롤러 테스트")
 class TodoControllerTest {
 
@@ -66,15 +68,44 @@ class TodoControllerTest {
         .description("테스트 설명")
         .status(TodoStatus.PENDING)
         .userId(1L)
-        .createdAt(LocalDateTime.now())
-        .updatedAt(LocalDateTime.now())
         .build();
   }
 
   @Test
-  @DisplayName("할일 생성 - 성공 (마지막 테스트는 GET 요청으로 진행하므로 여기서는 테스트 생략)")
-  void testCreateTodo_RequiresAuth() throws Exception {
-    // 인증이 필요한 엔드포인트이므로 여기서는 생략
-    // 실제 통합 테스트에서는 JWT 토큰과 함께 요청
+  @DisplayName("할일 생성 - 성공")
+  void testCreateTodo_Success() throws Exception {
+    // Given
+    TodoRequest request = TodoRequest.builder()
+        .title("테스트 할일")
+        .description("테스트 설명")
+        .build();
+
+    when(createTodoUseCase.createTodo(anyLong(), any(TodoRequest.class)))
+        .thenReturn(testTodoResponse);
+
+    // When & Then
+    mockMvc.perform(post("/api/v1/todos")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.success", notNullValue()));
+
+    verify(createTodoUseCase, times(1)).createTodo(anyLong(), any(TodoRequest.class));
+  }
+
+  @Test
+  @DisplayName("할일 조회 - 성공")
+  void testGetTodoById_Success() throws Exception {
+    // Given
+    when(getTodoUseCase.getTodoById(anyLong(), anyLong()))
+        .thenReturn(testTodoResponse);
+
+    // When & Then
+    mockMvc.perform(get("/api/v1/todos/1")
+            .contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success", notNullValue()));
+
+    verify(getTodoUseCase, times(1)).getTodoById(anyLong(), anyLong());
   }
 }
