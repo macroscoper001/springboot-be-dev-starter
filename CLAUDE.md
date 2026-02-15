@@ -70,16 +70,23 @@ HTTP Response
 #### **Application 계층** (사용 사례 정의)
 - **Port (Input)**: UseCase 인터페이스
   - `CreateXxxUseCase`, `GetXxxUseCase`, `UpdateXxxUseCase`, `DeleteXxxUseCase` 등
+  - 메서드 시그니처: `XxxResult xxxMethod(XxxCommand command)` 또는 `XxxResult xxxMethod(Long userId, XxxCommand command)`
   - 위치: `application/port/in/`
-
+- **Command 클래스 (port/in/command/)**: 입력 데이터 캡슐화
+  - `CreateXxxCommand`, `UpdateXxxCommand` 등
+  - 위치: `application/port/in/command/`
+- **Result 클래스 (port/in/command/)**: 출력 데이터 캡슐화
+  - `XxxResult` (예: `UserResult`, `TodoResult`)
+  - 위치: `application/port/in/command/`
 - **Port (Output)**: 저장소 포트 인터페이스 (예: `UserPort`, `TodoPort`)
   - 기존 Repository를 대체하는 추상화
   - 위치: `application/port/out/`
 
 - **Service**: `@Service` ApplicationService (UseCase 구현체)
   - 모든 UseCase 인터페이스 구현
-  - Port 의존 (Repository 아님)
+  - Out Port 의존 (주입받음)
   - `@Transactional` 포함, 비즈니스 로직 포함
+  - Command 처리 및 Result 반환
   - 위치: `application/service/`
 
 #### **Adapter 계층** (기술 구현 분리)
@@ -89,7 +96,7 @@ HTTP Response
   - SecurityContext에서 `Authentication.getName()` 사용
   - **데이터 흐름**: `Request` → `Command` → `UseCase` → `Result` → `Response`
   - **DTOs & Commands**:
-    - `adapter/in/web/dto/`: 요청/응답 클래스 (HTTP 계층)
+    - `adapter/in/web/dto/`: HTTP 요청/응답 DTO (검증 애노테이션 포함)
     - `application/port/in/command/`: Command 클래스 (UseCase 입력)
     - `application/port/in/command/`: Result 클래스 (UseCase 출력)
 
@@ -97,6 +104,7 @@ HTTP Response
   - `Spring Data JPA`: JPA 저장소 (`UserJpaRepository`, `TodoJpaRepository`)
   - `Port 구현체`: Adapter (`UserPersistenceAdapter`, `TodoPersistenceAdapter`)
   - Out Port 인터페이스 구현
+  - JPA와 도메인 사이의 변환 담당
 
 **디렉토리 구조 예시**:
 ```
@@ -444,16 +452,32 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 1. **디렉토리 구조 생성**
    ```bash
    src/main/java/com/example/starter/domain/{domain}/
-   ├── domain/                      # 도메인 엔티티
+   ├── domain/                           # 도메인 엔티티
+   │   └── {Entity}.java
    ├── application/
    │   ├── port/
-   │   │   ├── in/                 # UseCase 인터페이스
-   │   │   └── out/                # Out Port 인터페이스
-   │   └── service/                # ApplicationService
+   │   │   ├── in/                      # UseCase 인터페이스
+   │   │   │   ├── Create{Entity}UseCase.java
+   │   │   │   ├── Get{Entity}UseCase.java
+   │   │   │   ├── Update{Entity}UseCase.java
+   │   │   │   └── Delete{Entity}UseCase.java
+   │   │   ├── in/command/              # Command & Result 클래스
+   │   │   │   ├── Create{Entity}Command.java
+   │   │   │   ├── Update{Entity}Command.java
+   │   │   │   └── {Entity}Result.java
+   │   │   └── out/                     # Out Port 인터페이스
+   │   │       └── {Entity}Port.java
+   │   └── service/                     # ApplicationService
+   │       └── {Entity}Service.java
    └── adapter/
-       ├── in/web/                 # REST Controller
+       ├── in/web/
+       │   ├── {Entity}Controller.java  # REST Controller
        │   └── dto/
-       └── out/persistence/        # JPA Adapter
+       │       ├── {Entity}Request.java # HTTP Request DTO
+       │       └── {Entity}Response.java # HTTP Response DTO
+       └── out/persistence/            # JPA Adapter
+           ├── {Entity}JpaRepository.java
+           └── {Entity}PersistenceAdapter.java
    ```
 
 2. **도메인 계층 (domain/)**
@@ -512,8 +536,10 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 
 ### TDD 기반 개발 흐름
 
-1. **포트 정의** (계약 먼저)
+1. **포트 및 Command/Result 정의** (계약 먼저)
    - UseCase 입력 포트 인터페이스 작성: `application/port/in/XxxUseCase.java`
+   - Command 클래스 작성: `application/port/in/command/XxxCommand.java`
+   - Result 클래스 작성: `application/port/in/command/XxxResult.java`
    - Out Port 출력 포트 인터페이스 작성: `application/port/out/XxxPort.java`
 
 2. **테스트 작성** (Red)
@@ -527,21 +553,22 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
    - Out Port 메서드 호출
 
 4. **출력 어댑터 구현**
-   - `application/port/out/{Entity}Port.java` 인터페이스 작성
-   - `adapter/out/persistence/{Entity}JpaRepository.java` (Spring Data JPA)
-   - `adapter/out/persistence/{Entity}PersistenceAdapter.java` (Port 구현)
+   - `application/port/out/{Entity}Port.java` 인터페이스 작성 (저장소 메서드 추상화)
+   - `adapter/out/persistence/{Entity}JpaRepository.java` (Spring Data JPA 저장소)
+   - `adapter/out/persistence/{Entity}PersistenceAdapter.java` (Out Port 구현, JPA와 도메인 사이 변환)
 
 5. **입력 어댑터 구현**
-   - `adapter/in/web/{Entity}Controller.java`: UseCase 주입, 라우팅
-   - `adapter/in/web/dto/{Entity}Request.java`, `{Entity}Response.java`
+   - `adapter/in/web/{Entity}Controller.java`: UseCase 주입, Request → Command 변환, Result → Response 변환
+   - `adapter/in/web/dto/{Entity}Request.java`: HTTP 요청 DTO (필드 검증)
+   - `adapter/in/web/dto/{Entity}Response.java`: HTTP 응답 DTO (fromResult() 메서드 포함)
 
 6. **컨트롤러 테스트**
    - `src/test/java/domain/{domain}/adapter/in/web/{Entity}ControllerTest.java`
    - UseCase를 Mock으로 주입
 
 7. **도메인 엔티티 및 마이그레이션**
-   - `domain/{Entity}.java`: JPA Entity 작성
-   - `db/migration/V{N}__{domain}.sql`: Flyway 마이그레이션
+   - `domain/{Entity}.java`: JPA Entity 작성 (BaseEntity 확장, 비즈니스 메서드 포함)
+   - `db/migration/V{N}__{domain}.sql`: Flyway 마이그레이션 작성
 
 8. **테스트 실행 및 검증**
    ```bash
