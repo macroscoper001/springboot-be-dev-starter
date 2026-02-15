@@ -3,7 +3,9 @@
 .vscode/
 .claude/*
 !.claude/commands/
+!.claude/commands/**
 !.claude/agents/
+!.claude/agents/**
 *.swp
 *.swo
 *~
