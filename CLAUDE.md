@@ -396,6 +396,49 @@ public class UserPersistenceAdapter implements UserPort {
 }
 ```
 
+### 도메인 간 의존성 (Cross-Domain Port Usage)
+
+도메인은 **같은 계층의 다른 도메인의 Out Port를 주입받아 사용**할 수 있습니다.
+
+**사용 사례**: Auth 도메인이 User 도메인의 기능을 필요로 하는 경우
+- Auth Service는 로그인 시 User를 조회해야 함
+- User Port를 주입받아 사용 (User Repository가 아님!)
+
+```java
+// ✅ 올바른 패턴: Auth Service가 User Port 의존
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class AuthService implements LoginUseCase, RefreshTokenUseCase {
+  private final UserPort userPort;           // User 도메인의 Out Port 주입
+  private final JwtTokenProvider jwtTokenProvider;
+  private final PasswordEncoder passwordEncoder;
+
+  @Override
+  public AuthResult login(LoginCommand command) {
+    // UserPort를 사용하여 사용자 조회
+    User user = userPort.findByUsername(command.username())
+        .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
+
+    // 비밀번호 검증
+    if (!passwordEncoder.matches(command.password(), user.getPassword())) {
+      throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+    }
+
+    // 토큰 생성
+    String accessToken = jwtTokenProvider.createAccessToken(user.getId().toString());
+    String refreshToken = jwtTokenProvider.createRefreshToken(user.getId().toString());
+
+    return new AuthResult(accessToken, refreshToken, expirationSeconds);
+  }
+}
+```
+
+**주의사항**:
+- ❌ Auth가 User의 Service를 직접 호출하면 안 됨 (의존성 역전 원칙 위반)
+- ✅ Auth는 User의 Out Port(UserPort)만 의존해야 함
+- 도메인 간 순환 의존성 금지 (A → B → A 불가)
+
 ### 새로운 도메인 추가 (헥사고날 아키텍처)
 
 1. **디렉토리 구조 생성**
