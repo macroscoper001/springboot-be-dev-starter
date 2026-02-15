@@ -87,7 +87,11 @@ HTTP Response
   - `@RestController`: REST 엔드포인트
   - UseCase 인터페이스 주입받음
   - SecurityContext에서 `Authentication.getName()` 사용
-  - **DTOs**: `adapter/in/web/dto/` 하위 폴더의 요청/응답 클래스
+  - **데이터 흐름**: `Request` → `Command` → `UseCase` → `Result` → `Response`
+  - **DTOs & Commands**:
+    - `adapter/in/web/dto/`: 요청/응답 클래스 (HTTP 계층)
+    - `application/port/in/command/`: Command 클래스 (UseCase 입력)
+    - `application/port/in/command/`: Result 클래스 (UseCase 출력)
 
 - **Output Adapter (out/persistence/)**
   - `Spring Data JPA`: JPA 저장소 (`UserJpaRepository`, `TodoJpaRepository`)
@@ -98,27 +102,31 @@ HTTP Response
 ```
 domain/user/
 ├── domain/
-│   └── User.java
+│   └── User.java                          # JPA Entity
 ├── application/
 │   ├── port/
 │   │   ├── in/
-│   │   │   ├── CreateUserUseCase.java
+│   │   │   ├── CreateUserUseCase.java     # UseCase 인터페이스
 │   │   │   ├── GetUserUseCase.java
 │   │   │   ├── UpdateUserUseCase.java
 │   │   │   └── DeleteUserUseCase.java
 │   │   └── out/
-│   │       └── UserPort.java
-│   └── service/
-│       └── UserService.java (모든 UseCase 구현)
+│   │       └── UserPort.java              # Out Port (저장소 추상화)
+│   ├── service/
+│   │   └── UserService.java               # ApplicationService (모든 UseCase 구현)
+│   └── port/in/command/                   # Command & Result 클래스
+│       ├── CreateUserCommand.java
+│       ├── UpdateUserCommand.java
+│       └── UserResult.java
 └── adapter/
     ├── in/web/
-    │   ├── UserController.java
+    │   ├── UserController.java            # REST Controller
     │   └── dto/
-    │       ├── UserRequest.java
-    │       └── UserResponse.java
+    │       ├── UserRequest.java           # HTTP Request DTO
+    │       └── UserResponse.java          # HTTP Response DTO
     └── out/persistence/
-        ├── UserJpaRepository.java
-        └── UserPersistenceAdapter.java
+        ├── UserJpaRepository.java         # Spring Data JPA
+        └── UserPersistenceAdapter.java    # Port 구현체
 ```
 
 **핵심 패턴**:
