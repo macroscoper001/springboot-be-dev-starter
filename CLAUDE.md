@@ -247,10 +247,19 @@ DB_HOST=localhost          # Docker 없는 로컬 개발용
 - Spring Data에 의해 자동으로 채워짐, **빌더에서 수동으로 설정하지 않기**
 - `JpaAuditConfig`를 통해 활성화 (한 곳에만; 중복 `@EnableJpaAuditing` 피하기)
 
-### 입력 어댑터 (Controller)에서의 사용자 인증
+### 입력 어댑터 (Controller)에서의 데이터 변환 및 인증
+**데이터 변환 흐름**: `Request` → `Command` → `UseCase` → `Result` → `Response`
+
+1. **Request 수신**: HTTP 요청의 DTO
+2. **Command 생성**: Request를 Command 객체로 변환 (비즈니스 레이어용)
+3. **UseCase 호출**: Command를 전달하여 UseCase 실행
+4. **Result 처리**: UseCase의 Result를 Response로 변환
+5. **Response 반환**: HTTP 응답 DTO로 반환
+
+**인증 처리**:
 - Spring Security는 `Authentication.getName()`에 사용자 ID 문자열 채움
 - 패턴: `Long userId = Long.parseLong(authentication.getName())`
-- 어댑터에서 userId를 추출하여 UseCase에 전달
+- 어댑터에서 userId를 추출하여 Command에 포함
 - 서비스 계층은 userId를 매개변수로 받아 행 수준 권한 부여 처리
 
 ```java
@@ -263,11 +272,25 @@ public class TodoController {
   public ResponseEntity<ApiResponse<TodoResponse>> createTodo(
       @RequestBody TodoRequest request,
       Authentication authentication) {
+    // 1. userId 추출
     Long userId = Long.parseLong(authentication.getName());
-    // UseCase에 userId 전달
-    TodoResponse response = createTodoUseCase.createTodo(userId, request);
+
+    // 2. Request → Command 변환
+    CreateTodoCommand command = new CreateTodoCommand(
+      userId,
+      request.getTitle(),
+      request.getDescription()
+    );
+
+    // 3. UseCase 호출
+    TodoResult result = createTodoUseCase.createTodo(userId, command);
+
+    // 4. Result → Response 변환
+    TodoResponse response = TodoResponse.fromResult(result);
+
+    // 5. 응답 반환
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(ApiResponse.success(response));
+        .body(ApiResponse.success(response, "할일이 생성되었습니다"));
   }
 }
 ```
