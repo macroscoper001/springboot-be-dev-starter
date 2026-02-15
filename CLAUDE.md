@@ -272,6 +272,70 @@ public class TodoController {
 }
 ```
 
+### Command 및 Result 패턴
+
+**Command 클래스** (비즈니스 로직 입력):
+- 위치: `application/port/in/command/` (예: `CreateUserCommand.java`)
+- UseCase의 입력 데이터를 캡슐화
+- 서비스는 Request의 raw 데이터 대신 도메인 개념의 Command를 받음
+- 불변성: `record` (Java 14+) 또는 `@Value`로 구현
+- 예:
+  ```java
+  // ✅ Record 사용 (Java 16+, 권장)
+  public record CreateUserCommand(
+    String email,
+    String username,
+    String password
+  ) {}
+
+  // ✅ Lombok 사용
+  @Value
+  @RequiredArgsConstructor
+  public class CreateUserCommand {
+    String email;
+    String username;
+    String password;
+  }
+  ```
+
+**Result 클래스** (비즈니스 로직 출력):
+- 위치: `application/port/in/command/` (예: `UserResult.java`)
+- UseCase의 출력 데이터를 캡슐화
+- 서비스는 Entity 대신 도메인 개념의 Result를 반환
+- 불변성: `record` 또는 `@Value`로 구현
+- 컨트롤러에서 Response로 변환하기 쉽도록 설계
+- 예:
+  ```java
+  // ✅ Record 사용
+  public record UserResult(
+    Long id,
+    String email,
+    String username,
+    LocalDateTime createdAt
+  ) {}
+  ```
+
+**변환 메서드**:
+- Response 클래스에 `fromResult()` 정적 메서드 제공
+- Result → Response 변환 담당
+- 예:
+  ```java
+  @Data
+  public class UserResponse {
+    private Long id;
+    private String email;
+    private String username;
+
+    public static UserResponse fromResult(UserResult result) {
+      UserResponse response = new UserResponse();
+      response.setId(result.id());
+      response.setEmail(result.email());
+      response.setUsername(result.username());
+      return response;
+    }
+  }
+  ```
+
 ### 출력 포트 (Out Port) 설계
 - Out Port는 저장소 인터페이스를 추상화
 - 기술 독립적이어야 함 (JPA 구현 세부사항 숨김)
