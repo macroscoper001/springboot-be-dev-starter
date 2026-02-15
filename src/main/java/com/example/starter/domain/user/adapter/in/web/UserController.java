@@ -7,6 +7,9 @@ import com.example.starter.domain.user.application.port.in.CreateUserUseCase;
 import com.example.starter.domain.user.application.port.in.DeleteUserUseCase;
 import com.example.starter.domain.user.application.port.in.GetUserUseCase;
 import com.example.starter.domain.user.application.port.in.UpdateUserUseCase;
+import com.example.starter.domain.user.application.port.in.command.CreateUserCommand;
+import com.example.starter.domain.user.application.port.in.command.UpdateUserCommand;
+import com.example.starter.domain.user.application.port.in.command.UserResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,7 +49,14 @@ public class UserController {
   @PostMapping
   @Operation(summary = "사용자 생성", description = "새로운 사용자를 생성합니다")
   public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserRequest request) {
-    UserResponse response = createUserUseCase.createUser(request);
+    CreateUserCommand command = new CreateUserCommand(
+      request.getEmail(),
+      request.getUsername(),
+      request.getPassword(),
+      request.getName()
+    );
+    UserResult result = createUserUseCase.createUser(command);
+    UserResponse response = UserResponse.fromUserResult(result);
     return ResponseEntity
         .status(HttpStatus.CREATED)
         .body(ApiResponse.success(response, "사용자가 생성되었습니다"));
@@ -58,7 +68,8 @@ public class UserController {
   @GetMapping("/{userId}")
   @Operation(summary = "사용자 상세 조회", description = "사용자 ID로 사용자 정보를 조회합니다")
   public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long userId) {
-    UserResponse response = getUserUseCase.getUserById(userId);
+    UserResult result = getUserUseCase.getUserById(userId);
+    UserResponse response = UserResponse.fromUserResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response));
@@ -70,7 +81,8 @@ public class UserController {
   @GetMapping
   @Operation(summary = "모든 사용자 조회", description = "모든 사용자를 페이징하여 조회합니다")
   public ResponseEntity<ApiResponse<Page<UserResponse>>> getAllUsers(Pageable pageable) {
-    Page<UserResponse> response = getUserUseCase.getAllUsers(pageable);
+    Page<UserResult> resultPage = getUserUseCase.getAllUsers(pageable);
+    Page<UserResponse> response = resultPage.map(UserResponse::fromUserResult);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response));
@@ -84,7 +96,14 @@ public class UserController {
   public ResponseEntity<ApiResponse<UserResponse>> updateUser(
       @PathVariable Long userId,
       @Valid @RequestBody UserRequest request) {
-    UserResponse response = updateUserUseCase.updateUser(userId, request);
+    UpdateUserCommand command = new UpdateUserCommand(
+      request.getEmail(),
+      request.getUsername(),
+      request.getPassword(),
+      request.getName()
+    );
+    UserResult result = updateUserUseCase.updateUser(userId, command);
+    UserResponse response = UserResponse.fromUserResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "사용자 정보가 업데이트되었습니다"));

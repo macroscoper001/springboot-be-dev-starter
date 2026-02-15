@@ -2,11 +2,11 @@ package com.example.starter.domain.auth.application.service;
 
 import com.example.starter.common.exception.BusinessException;
 import com.example.starter.common.exception.ErrorCode;
-import com.example.starter.domain.auth.adapter.in.web.dto.LoginRequest;
-import com.example.starter.domain.auth.adapter.in.web.dto.LoginResponse;
-import com.example.starter.domain.auth.adapter.in.web.dto.RefreshTokenRequest;
 import com.example.starter.domain.auth.application.port.in.LoginUseCase;
 import com.example.starter.domain.auth.application.port.in.RefreshTokenUseCase;
+import com.example.starter.domain.auth.application.port.in.command.AuthResult;
+import com.example.starter.domain.auth.application.port.in.command.LoginCommand;
+import com.example.starter.domain.auth.application.port.in.command.RefreshTokenCommand;
 import com.example.starter.domain.user.application.port.out.UserPort;
 import com.example.starter.domain.user.domain.User;
 import com.example.starter.security.JwtProperties;
@@ -32,13 +32,13 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
   private final PasswordEncoder passwordEncoder;
 
   @Override
-  public LoginResponse login(LoginRequest request) {
+  public AuthResult login(LoginCommand command) {
     // 사용자명으로 사용자 조회
-    User user = userPort.findByUsername(request.getUsername())
+    User user = userPort.findByUsername(command.username())
         .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
     // 비밀번호 검증
-    if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+    if (!passwordEncoder.matches(command.password(), user.getPassword())) {
       throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
     }
 
@@ -53,18 +53,18 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 
     log.info("사용자 로그인 성공: userId={}", user.getId());
 
-    return LoginResponse.builder()
-        .accessToken(accessToken)
-        .refreshToken(refreshToken)
-        .expiresIn(jwtProperties.getAccessExpiration() / 1000)
-        .build();
+    return new AuthResult(
+      accessToken,
+      refreshToken,
+      jwtProperties.getAccessExpiration() / 1000
+    );
   }
 
   @Override
-  public LoginResponse refreshToken(RefreshTokenRequest request) {
+  public AuthResult refreshToken(RefreshTokenCommand command) {
     // Refresh Token 검증
-    jwtTokenProvider.validateToken(request.getRefreshToken());
-    String userId = jwtTokenProvider.getUserIdFromToken(request.getRefreshToken());
+    jwtTokenProvider.validateToken(command.refreshToken());
+    String userId = jwtTokenProvider.getUserIdFromToken(command.refreshToken());
 
     // 사용자 존재 여부 확인
     User user = userPort.findById(Long.parseLong(userId))
@@ -76,10 +76,10 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 
     log.info("토큰 갱신 완료: userId={}", userId);
 
-    return LoginResponse.builder()
-        .accessToken(newAccessToken)
-        .refreshToken(newRefreshToken)
-        .expiresIn(jwtProperties.getAccessExpiration() / 1000)
-        .build();
+    return new AuthResult(
+      newAccessToken,
+      newRefreshToken,
+      jwtProperties.getAccessExpiration() / 1000
+    );
   }
 }

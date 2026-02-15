@@ -1,7 +1,7 @@
 package com.example.starter.domain.auth.application.port.in;
 
-import com.example.starter.domain.auth.adapter.in.web.dto.LoginRequest;
-import com.example.starter.domain.auth.adapter.in.web.dto.LoginResponse;
+import com.example.starter.domain.auth.application.port.in.command.AuthResult;
+import com.example.starter.domain.auth.application.port.in.command.LoginCommand;
 
 /**
  * 로그인 유스케이스
@@ -11,5 +11,5 @@ public interface LoginUseCase {
   /**
    * 로그인
    */
-  LoginResponse login(LoginRequest request);
+  AuthResult login(LoginCommand command);
 }

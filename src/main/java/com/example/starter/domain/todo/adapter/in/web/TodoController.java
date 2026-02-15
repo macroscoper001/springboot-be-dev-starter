@@ -8,6 +8,9 @@ import com.example.starter.domain.todo.application.port.in.CreateTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.DeleteTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.GetTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.UpdateTodoUseCase;
+import com.example.starter.domain.todo.application.port.in.command.CreateTodoCommand;
+import com.example.starter.domain.todo.application.port.in.command.TodoResult;
+import com.example.starter.domain.todo.application.port.in.command.UpdateTodoCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,7 +55,9 @@ public class TodoController {
       @Valid @RequestBody TodoRequest request,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    TodoResponse response = createTodoUseCase.createTodo(userId, request);
+    CreateTodoCommand command = new CreateTodoCommand(request.getTitle(), request.getDescription());
+    TodoResult result = createTodoUseCase.createTodo(userId, command);
+    TodoResponse response = TodoResponse.fromTodoResult(result);
     return ResponseEntity
         .status(HttpStatus.CREATED)
         .body(ApiResponse.success(response, "할일이 생성되었습니다"));
@@ -67,7 +72,8 @@ public class TodoController {
       @PathVariable Long todoId,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    TodoResponse response = getTodoUseCase.getTodoById(todoId, userId);
+    TodoResult result = getTodoUseCase.getTodoById(todoId, userId);
+    TodoResponse response = TodoResponse.fromTodoResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response));
@@ -82,7 +88,8 @@ public class TodoController {
       Pageable pageable,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    Page<TodoResponse> response = getTodoUseCase.getUserTodos(userId, pageable);
+    Page<TodoResult> resultPage = getTodoUseCase.getUserTodos(userId, pageable);
+    Page<TodoResponse> response = resultPage.map(TodoResponse::fromTodoResult);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response));
@@ -98,7 +105,9 @@ public class TodoController {
       @Valid @RequestBody TodoRequest request,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    TodoResponse response = updateTodoUseCase.updateTodo(todoId, userId, request);
+    UpdateTodoCommand command = new UpdateTodoCommand(request.getTitle(), request.getDescription());
+    TodoResult result = updateTodoUseCase.updateTodo(todoId, userId, command);
+    TodoResponse response = TodoResponse.fromTodoResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "할일이 수정되었습니다"));
@@ -128,7 +137,8 @@ public class TodoController {
       @PathVariable Long todoId,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    TodoResponse response = changeTodoStatusUseCase.completeTodo(todoId, userId);
+    TodoResult result = changeTodoStatusUseCase.completeTodo(todoId, userId);
+    TodoResponse response = TodoResponse.fromTodoResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "할일이 완료되었습니다"));
@@ -143,7 +153,8 @@ public class TodoController {
       @PathVariable Long todoId,
       Authentication authentication) {
     Long userId = Long.parseLong(authentication.getName());
-    TodoResponse response = changeTodoStatusUseCase.pendingTodo(todoId, userId);
+    TodoResult result = changeTodoStatusUseCase.pendingTodo(todoId, userId);
+    TodoResponse response = TodoResponse.fromTodoResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "할일이 미완료 처리되었습니다"));

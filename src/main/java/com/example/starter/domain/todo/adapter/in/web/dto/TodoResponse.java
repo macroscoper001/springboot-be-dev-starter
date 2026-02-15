@@ -1,5 +1,6 @@
 package com.example.starter.domain.todo.adapter.in.web.dto;
 
+import com.example.starter.domain.todo.application.port.in.command.TodoResult;
 import com.example.starter.domain.todo.domain.Todo;
 import com.example.starter.domain.todo.domain.TodoStatus;
 import java.time.LocalDateTime;
@@ -37,6 +38,21 @@ public class TodoResponse {
         .userId(todo.getUserId())
         .createdAt(todo.getCreatedAt())
         .updatedAt(todo.getUpdatedAt())
+        .build();
+  }
+
+  /**
+   * TodoResult에서 DTO로 변환
+   */
+  public static TodoResponse fromTodoResult(TodoResult result) {
+    return TodoResponse.builder()
+        .id(result.id())
+        .title(result.title())
+        .description(result.description())
+        .status(result.status())
+        .userId(result.userId())
+        .createdAt(result.createdAt())
+        .updatedAt(result.updatedAt())
         .build();
   }
 }

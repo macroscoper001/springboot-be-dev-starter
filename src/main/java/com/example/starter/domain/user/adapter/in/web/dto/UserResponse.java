@@ -1,5 +1,6 @@
 package com.example.starter.domain.user.adapter.in.web.dto;
 
+import com.example.starter.domain.user.application.port.in.command.UserResult;
 import com.example.starter.domain.user.domain.User;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -36,6 +37,21 @@ public class UserResponse {
         .active(user.isActive())
         .createdAt(user.getCreatedAt())
         .updatedAt(user.getUpdatedAt())
+        .build();
+  }
+
+  /**
+   * UserResult에서 DTO로 변환
+   */
+  public static UserResponse fromUserResult(UserResult result) {
+    return UserResponse.builder()
+        .id(result.id())
+        .email(result.email())
+        .username(result.username())
+        .name(result.name())
+        .active(result.active())
+        .createdAt(result.createdAt())
+        .updatedAt(result.updatedAt())
         .build();
   }
 }

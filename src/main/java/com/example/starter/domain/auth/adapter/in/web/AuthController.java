@@ -6,6 +6,9 @@ import com.example.starter.domain.auth.adapter.in.web.dto.LoginResponse;
 import com.example.starter.domain.auth.adapter.in.web.dto.RefreshTokenRequest;
 import com.example.starter.domain.auth.application.port.in.LoginUseCase;
 import com.example.starter.domain.auth.application.port.in.RefreshTokenUseCase;
+import com.example.starter.domain.auth.application.port.in.command.AuthResult;
+import com.example.starter.domain.auth.application.port.in.command.LoginCommand;
+import com.example.starter.domain.auth.application.port.in.command.RefreshTokenCommand;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,7 +38,9 @@ public class AuthController {
   @PostMapping("/login")
   @Operation(summary = "로그인", description = "사용자명과 비밀번호로 로그인하여 JWT 토큰 발급")
   public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-    LoginResponse response = loginUseCase.login(request);
+    LoginCommand command = new LoginCommand(request.getUsername(), request.getPassword());
+    AuthResult result = loginUseCase.login(command);
+    LoginResponse response = LoginResponse.fromAuthResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "로그인에 성공했습니다"));
@@ -47,7 +52,9 @@ public class AuthController {
   @PostMapping("/refresh")
   @Operation(summary = "토큰 갱신", description = "Refresh Token으로 새로운 Access Token 발급")
   public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-    LoginResponse response = refreshTokenUseCase.refreshToken(request);
+    RefreshTokenCommand command = new RefreshTokenCommand(request.getRefreshToken());
+    AuthResult result = refreshTokenUseCase.refreshToken(command);
+    LoginResponse response = LoginResponse.fromAuthResult(result);
     return ResponseEntity
         .status(HttpStatus.OK)
         .body(ApiResponse.success(response, "토큰이 갱신되었습니다"));

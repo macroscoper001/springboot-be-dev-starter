@@ -2,13 +2,14 @@ package com.example.starter.domain.todo.application.service;
 
 import com.example.starter.common.exception.BusinessException;
 import com.example.starter.common.exception.ErrorCode;
-import com.example.starter.domain.todo.adapter.in.web.dto.TodoRequest;
-import com.example.starter.domain.todo.adapter.in.web.dto.TodoResponse;
 import com.example.starter.domain.todo.application.port.in.ChangeTodoStatusUseCase;
 import com.example.starter.domain.todo.application.port.in.CreateTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.DeleteTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.GetTodoUseCase;
 import com.example.starter.domain.todo.application.port.in.UpdateTodoUseCase;
+import com.example.starter.domain.todo.application.port.in.command.CreateTodoCommand;
+import com.example.starter.domain.todo.application.port.in.command.TodoResult;
+import com.example.starter.domain.todo.application.port.in.command.UpdateTodoCommand;
 import com.example.starter.domain.todo.application.port.out.TodoPort;
 import com.example.starter.domain.todo.domain.Todo;
 import com.example.starter.domain.todo.domain.TodoStatus;
@@ -31,48 +32,47 @@ public class TodoService implements CreateTodoUseCase, GetTodoUseCase, UpdateTod
   private final TodoPort todoPort;
 
   @Override
-  public TodoResponse createTodo(Long userId, TodoRequest request) {
+  public TodoResult createTodo(Long userId, CreateTodoCommand command) {
     Todo todo = Todo.builder()
-        .title(request.getTitle())
-        .description(request.getDescription())
-        .status(TodoStatus.PENDING)
+        .title(command.title())
+        .description(command.description())
         .userId(userId)
         .build();
 
     Todo savedTodo = todoPort.save(todo);
     log.info("할일 생성 완료: todoId={}, userId={}", savedTodo.getId(), userId);
 
-    return TodoResponse.fromEntity(savedTodo);
+    return toTodoResult(savedTodo);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public TodoResponse getTodoById(Long todoId, Long userId) {
+  public TodoResult getTodoById(Long todoId, Long userId) {
     Todo todo = todoPort.findByIdAndUserId(todoId, userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "할일을 찾을 수 없습니다"));
 
-    return TodoResponse.fromEntity(todo);
+    return toTodoResult(todo);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public Page<TodoResponse> getUserTodos(Long userId, Pageable pageable) {
+  public Page<TodoResult> getUserTodos(Long userId, Pageable pageable) {
     return todoPort.findByUserId(userId, pageable)
-        .map(TodoResponse::fromEntity);
+        .map(this::toTodoResult);
   }
 
   @Override
-  public TodoResponse updateTodo(Long todoId, Long userId, TodoRequest request) {
+  public TodoResult updateTodo(Long todoId, Long userId, UpdateTodoCommand command) {
     Todo todo = todoPort.findByIdAndUserId(todoId, userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "할일을 찾을 수 없습니다"));
 
-    todo.updateTitle(request.getTitle());
-    todo.updateDescription(request.getDescription());
+    todo.updateTitle(command.title());
+    todo.updateDescription(command.description());
 
     Todo updatedTodo = todoPort.save(todo);
     log.info("할일 수정 완료: todoId={}, userId={}", todoId, userId);
 
-    return TodoResponse.fromEntity(updatedTodo);
+    return toTodoResult(updatedTodo);
   }
 
   @Override
@@ -85,7 +85,7 @@ public class TodoService implements CreateTodoUseCase, GetTodoUseCase, UpdateTod
   }
 
   @Override
-  public TodoResponse completeTodo(Long todoId, Long userId) {
+  public TodoResult completeTodo(Long todoId, Long userId) {
     Todo todo = todoPort.findByIdAndUserId(todoId, userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "할일을 찾을 수 없습니다"));
 
@@ -94,11 +94,11 @@ public class TodoService implements CreateTodoUseCase, GetTodoUseCase, UpdateTod
 
     log.info("할일 완료: todoId={}, userId={}", todoId, userId);
 
-    return TodoResponse.fromEntity(updatedTodo);
+    return toTodoResult(updatedTodo);
   }
 
   @Override
-  public TodoResponse pendingTodo(Long todoId, Long userId) {
+  public TodoResult pendingTodo(Long todoId, Long userId) {
     Todo todo = todoPort.findByIdAndUserId(todoId, userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "할일을 찾을 수 없습니다"));
 
@@ -107,6 +107,21 @@ public class TodoService implements CreateTodoUseCase, GetTodoUseCase, UpdateTod
 
     log.info("할일 미완료 처리: todoId={}, userId={}", todoId, userId);
 
-    return TodoResponse.fromEntity(updatedTodo);
+    return toTodoResult(updatedTodo);
+  }
+
+  /**
+   * Todo 엔티티를 TodoResult로 변환
+   */
+  private TodoResult toTodoResult(Todo todo) {
+    return new TodoResult(
+      todo.getId(),
+      todo.getUserId(),
+      todo.getTitle(),
+      todo.getDescription(),
+      todo.getStatus(),
+      todo.getCreatedAt(),
+      todo.getUpdatedAt()
+    );
   }
 }
