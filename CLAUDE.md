@@ -618,15 +618,25 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 
     @Test
     void testCreateUser_Success() {
-      // Given: Mock 설정
-      when(userPort.existsByEmail(...)).thenReturn(false);
-      when(userPort.save(...)).thenReturn(testUser);
+      // Given: Mock 설정 및 Command 준비
+      CreateUserCommand command = new CreateUserCommand("test@example.com", "testuser", "password123");
+      User createdUser = User.builder()
+          .id(1L)
+          .email("test@example.com")
+          .username("testuser")
+          .build();
 
-      // When: UseCase 호출
-      UserResponse response = userService.createUser(request);
+      when(userPort.existsByEmail(command.email())).thenReturn(false);
+      when(userPort.save(any(User.class))).thenReturn(createdUser);
+
+      // When: UseCase 호출 (Command 전달)
+      UserResult result = userService.createUser(command);
 
       // Then: 검증
-      assertNotNull(response);
+      assertNotNull(result);
+      assertEquals(1L, result.id());
+      assertEquals("test@example.com", result.email());
+      verify(userPort, times(1)).existsByEmail(command.email());
       verify(userPort, times(1)).save(any(User.class));
     }
   }
@@ -641,18 +651,30 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
   @SpringBootTest
   @AutoConfigureMockMvc
   class UserControllerTest {
+    @Autowired
+    private MockMvc mockMvc;
+
     @MockBean
     private CreateUserUseCase createUserUseCase;  // UseCase Mock
 
     @Test
     void testCreateUser_Success() throws Exception {
-      when(createUserUseCase.createUser(...))
-        .thenReturn(testUserResponse);
+      // Given: Request와 Mock Result 준비
+      UserRequest request = new UserRequest("test@example.com", "testuser", "password123");
+      UserResult userResult = new UserResult(1L, "test@example.com", "testuser", LocalDateTime.now());
 
+      when(createUserUseCase.createUser(any(CreateUserCommand.class)))
+        .thenReturn(userResult);
+
+      // When & Then: 요청 수행 및 검증
       mockMvc.perform(post("/api/v1/users")
           .contentType(MediaType.APPLICATION_JSON)
           .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isCreated());
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.id").value(1L))
+        .andExpect(jsonPath("$.data.email").value("test@example.com"));
+
+      verify(createUserUseCase, times(1)).createUser(any(CreateUserCommand.class));
     }
   }
   ```
@@ -707,39 +729,69 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
 - **확장성**: 새로운 기술 도입 시 어댑터만 변경
 - **명확한 책임**: 각 계층의 역할이 명확함
 
-### 실전 예시: User 도메인 전환 후 구조
+### 실전 예시: 현재 프로젝트 구조 (헥사고날 아키텍처 완전 적용)
+
+**프로젝트는 3개 도메인을 완전한 헥사고날 패턴으로 구현 중:**
+
 ```
-현재 프로젝트 User 도메인 구조:
+domain/
+├── user/                                  # 사용자 관리
+├── auth/                                  # 인증 (User Port 의존)
+└── todo/                                  # 할일 관리 (다중 테넌트 지원)
+
+각 도메인 구조 (user 도메인 예시):
 domain/user/
 ├── domain/
-│   └── User.java                          # JPA Entity (도메인 모델)
+│   └── User.java                          # JPA Entity (@Entity, BaseEntity 확장)
 ├── application/
 │   ├── port/
 │   │   ├── in/
-│   │   │   ├── CreateUserUseCase.java
+│   │   │   ├── CreateUserUseCase.java     # UseCase 인터페이스
 │   │   │   ├── GetUserUseCase.java
 │   │   │   ├── UpdateUserUseCase.java
 │   │   │   └── DeleteUserUseCase.java
+│   │   ├── in/command/                    # Command & Result 클래스
+│   │   │   ├── CreateUserCommand.java
+│   │   │   ├── UpdateUserCommand.java
+│   │   │   └── UserResult.java            # Record 또는 @Value
 │   │   └── out/
-│   │       └── UserPort.java             # 저장소 포트 (저장소 아님!)
+│   │       └── UserPort.java              # 저장소 포트 (저장소 아님!)
 │   └── service/
-│       └── UserService.java              # ApplicationService (모든 UseCase 구현)
+│       └── UserService.java               # ApplicationService (모든 UseCase 구현, Out Port 의존)
 └── adapter/
     ├── in/web/
-    │   ├── UserController.java           # REST Adapter
+    │   ├── UserController.java            # REST Adapter (Request → Command 변환)
     │   └── dto/
-    │       ├── UserRequest.java
-    │       └── UserResponse.java
+    │       ├── UserRequest.java           # HTTP Request DTO
+    │       └── UserResponse.java          # HTTP Response DTO (Result → Response 변환)
     └── out/persistence/
-        ├── UserJpaRepository.java        # Spring Data JPA
-        └── UserPersistenceAdapter.java   # Port 구현체 (JPA 위임)
+        ├── UserJpaRepository.java         # Spring Data JPA
+        └── UserPersistenceAdapter.java    # Port 구현체 (JPA와 도메인 사이 변환)
 
 테스트 구조:
 test/java/domain/user/
 ├── application/service/
-│   └── UserServiceTest.java              # Out Port 모킹
+│   └── UserServiceTest.java               # Out Port 모킹, Command 입력, Result 검증
 └── adapter/in/web/
-    └── UserControllerTest.java           # UseCase 모킹
+    └── UserControllerTest.java            # UseCase 모킹, Request 전송, Response 검증
+```
+
+**Auth 도메인의 특징 (도메인 간 의존성 예시)**:
+```
+domain/auth/
+├── application/
+│   ├── port/in/
+│   │   ├── LoginUseCase.java
+│   │   └── RefreshTokenUseCase.java
+│   ├── port/in/command/
+│   │   ├── LoginCommand.java
+│   │   ├── RefreshTokenCommand.java
+│   │   └── AuthResult.java
+│   └── service/
+│       └── AuthService.java               # ⭐ User의 UserPort 주입받음
+└── adapter/
+    └── in/web/
+        └── AuthController.java            # POST /api/v1/auth/login, /refresh-token
 ```
 
 ### 주요 변경사항 (레이어드 → 헥사고날)
@@ -831,4 +883,4 @@ Database
 
 ---
 
-**마지막 업데이트**: 2026-02-14 (헥사고날 아키텍처 전환 완료)
+**마지막 업데이트**: 2026-02-15 (CLAUDE.md 최적화: Command/Result 패턴, 데이터 흐름 명확화)
