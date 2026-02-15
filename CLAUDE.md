@@ -16,32 +16,48 @@ Claude Code (claude.ai/code)가 이 저장소의 코드를 작업할 때 참고�
 프로젝트는 **포트 & 어댑터 패턴(헥사고날 아키텍처)**을 도메인 주도 설계와 함께 사용합니다:
 
 ```
-┌─ 입력 어댑터 (Inbound) ─────┐
-│                             │
-│  REST Controller            │  SecurityFilter (JWT)
-│       ↓                      │       ↓
-│  UseCase Port (Input)       │  Authentication
-│       ↓                      │
-├─────────────────────────────┤
-│   도메인 계층 (Hexagon)     │
-│                             │
-│  ApplicationService          │
-│  (UseCase 구현)              │
-│       ↓                      │
-│  Out Port (영속성)           │
-│       ↓                      │
-├─────────────────────────────┤
-│  출력 어댑터 (Outbound)      │
-│                             │
-│  JPA Adapter                │
-│  (Port 구현)                 │
-│       ↓                      │
-│  PostgreSQL Database        │
-│                             │
-└─────────────────────────────┘
+HTTP Request (JSON)
+       ↓
+┌─ 입력 어댑터 (Inbound) ─────────────────┐
+│                                          │
+│  Request DTO                             │
+│       ↓ (Request → Command 변환)         │
+│  REST Controller                         │  SecurityFilter (JWT)
+│       ↓                                  │       ↓
+│  UseCase Port (Input) ← Command          │  Authentication
+│       ↓                                  │
+├──────────────────────────────────────────┤
+│   도메인 계층 (Hexagon)                 │
+│                                          │
+│  ApplicationService                      │
+│  (UseCase 구현)                          │
+│  Command 처리 → Result 생성              │
+│       ↓                                  │
+│  Out Port (영속성)                       │
+│       ↓                                  │
+├──────────────────────────────────────────┤
+│  출력 어댑터 (Outbound)                  │
+│                                          │
+│  JPA Adapter                             │
+│  (Port 구현) → Entity 변환               │
+│       ↓                                  │
+│  PostgreSQL Database                    │
+│                                          │
+└──────────────────────────────────────────┘
+       ↑
+   (Result ← Entity)
+       ↓
+Response DTO (JSON)
+       ↓
+HTTP Response
 ```
 
-**핵심 원칙**: 도메인이 중심이며, 어댑터가 도메인에 의존 (의존성 역전)
+**데이터 변환 흐름**: `Request` → `Command` → `UseCase` → `Result` → `Response`
+
+**핵심 원칙**:
+- 도메인이 중심이며, 어댑터가 도메인에 의존 (의존성 역전)
+- 각 계층은 다음 계층의 구현 세부사항을 알지 못함 (정보 은닉)
+- 도메인 간 통신은 Out Port를 통해서만 수행
 
 ### 도메인 구조 (헥사고날 아키텍처)
 각 도메인(예: `domain/user/`, `domain/todo/`)은 포트 & 어댑터 패턴을 따르며 다음 계층으로 구성됩니다:
