@@ -6,6 +6,8 @@
 !.claude/commands/**
 !.claude/agents/
 !.claude/agents/**
+!.claude/skills/
+!.claude/skills/**
 *.swp
 *.swo
 *~
