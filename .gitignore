@@ -57,3 +57,4 @@ node_modules/
 
 # Docker
 docker-compose.override.yml
+hook-test.txt
