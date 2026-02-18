@@ -5,8 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.example.starter.common.exception.BusinessException;
-import com.example.starter.domain.todo.adapter.in.web.dto.TodoRequest;
-import com.example.starter.domain.todo.adapter.in.web.dto.TodoResponse;
+import com.example.starter.domain.todo.application.port.in.command.CreateTodoCommand;
+import com.example.starter.domain.todo.application.port.in.command.TodoResult;
+import com.example.starter.domain.todo.application.port.in.command.UpdateTodoCommand;
 import com.example.starter.domain.todo.application.port.out.TodoPort;
 import com.example.starter.domain.todo.domain.Todo;
 import com.example.starter.domain.todo.domain.TodoStatus;
@@ -32,15 +33,15 @@ class TodoServiceTest {
   @InjectMocks
   private TodoService todoService;
 
-  private TodoRequest validRequest;
+  private CreateTodoCommand validCommand;
   private Todo testTodo;
 
   @BeforeEach
   void setUp() {
-    validRequest = TodoRequest.builder()
-        .title("테스트 할일")
-        .description("테스트 설명")
-        .build();
+    validCommand = new CreateTodoCommand(
+        "테스트 할일",
+        "테스트 설명"
+    );
 
     testTodo = Todo.builder()
         .id(1L)
@@ -59,12 +60,12 @@ class TodoServiceTest {
     when(todoPort.save(any(Todo.class))).thenReturn(testTodo);
 
     // When
-    TodoResponse response = todoService.createTodo(userId, validRequest);
+    TodoResult result = todoService.createTodo(userId, validCommand);
 
     // Then
-    assertNotNull(response);
-    assertEquals("테스트 할일", response.getTitle());
-    assertEquals(TodoStatus.PENDING, response.getStatus());
+    assertNotNull(result);
+    assertEquals("테스트 할일", result.title());
+    assertEquals(TodoStatus.PENDING, result.status());
     verify(todoPort, times(1)).save(any(Todo.class));
   }
 
@@ -77,11 +78,11 @@ class TodoServiceTest {
         .thenReturn(java.util.Optional.of(testTodo));
 
     // When
-    TodoResponse response = todoService.getTodoById(1L, userId);
+    TodoResult result = todoService.getTodoById(1L, userId);
 
     // Then
-    assertNotNull(response);
-    assertEquals("테스트 할일", response.getTitle());
+    assertNotNull(result);
+    assertEquals("테스트 할일", result.title());
   }
 
   @Test
@@ -107,11 +108,11 @@ class TodoServiceTest {
     when(todoPort.findByUserId(userId, pageable)).thenReturn(todoPage);
 
     // When
-    Page<TodoResponse> response = todoService.getUserTodos(userId, pageable);
+    Page<TodoResult> result = todoService.getUserTodos(userId, pageable);
 
     // Then
-    assertNotNull(response);
-    assertEquals(1, response.getTotalElements());
+    assertNotNull(result);
+    assertEquals(1, result.getTotalElements());
   }
 
   @Test
@@ -119,20 +120,17 @@ class TodoServiceTest {
   void testUpdateTodo_Success() {
     // Given
     Long userId = 1L;
-    TodoRequest updateRequest = TodoRequest.builder()
-        .title("수정된 제목")
-        .description("수정된 설명")
-        .build();
+    UpdateTodoCommand updateCommand = new UpdateTodoCommand("수정된 제목", "수정된 설명");
 
     when(todoPort.findByIdAndUserId(1L, userId))
         .thenReturn(java.util.Optional.of(testTodo));
     when(todoPort.save(any(Todo.class))).thenReturn(testTodo);
 
     // When
-    TodoResponse response = todoService.updateTodo(1L, userId, updateRequest);
+    TodoResult result = todoService.updateTodo(1L, userId, updateCommand);
 
     // Then
-    assertNotNull(response);
+    assertNotNull(result);
     verify(todoPort, times(1)).save(any(Todo.class));
   }
 
@@ -161,11 +159,11 @@ class TodoServiceTest {
     when(todoPort.save(any(Todo.class))).thenReturn(testTodo);
 
     // When
-    TodoResponse response = todoService.completeTodo(1L, userId);
+    TodoResult result = todoService.completeTodo(1L, userId);
 
     // Then
-    assertNotNull(response);
-    assertEquals(TodoStatus.PENDING, response.getStatus());
+    assertNotNull(result);
+    assertEquals(TodoStatus.COMPLETED, result.status());
     verify(todoPort, times(1)).save(any(Todo.class));
   }
 }

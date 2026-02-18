@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.example.starter.common.exception.BusinessException;
-import com.example.starter.domain.user.adapter.in.web.dto.UserRequest;
-import com.example.starter.domain.user.adapter.in.web.dto.UserResponse;
+import com.example.starter.domain.user.application.port.in.command.CreateUserCommand;
+import com.example.starter.domain.user.application.port.in.command.UserResult;
 import com.example.starter.domain.user.application.port.out.UserPort;
 import com.example.starter.domain.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,17 +31,17 @@ class UserServiceTest {
   @InjectMocks
   private UserService userService;
 
-  private UserRequest validRequest;
+  private CreateUserCommand validCommand;
   private User testUser;
 
   @BeforeEach
   void setUp() {
-    validRequest = UserRequest.builder()
-        .email("test@example.com")
-        .username("testuser")
-        .password("password123")
-        .name("테스트 사용자")
-        .build();
+    validCommand = new CreateUserCommand(
+        "test@example.com",
+        "testuser",
+        "password123",
+        "테스트 사용자"
+    );
 
     testUser = User.builder()
         .id(1L)
@@ -58,19 +57,19 @@ class UserServiceTest {
   @DisplayName("사용자 생성 - 성공")
   void testCreateUser_Success() {
     // Given
-    when(userPort.existsByEmail(validRequest.getEmail())).thenReturn(false);
-    when(userPort.existsByUsername(validRequest.getUsername())).thenReturn(false);
-    when(passwordEncoder.encode(validRequest.getPassword())).thenReturn("encodedPassword");
+    when(userPort.existsByEmail(validCommand.email())).thenReturn(false);
+    when(userPort.existsByUsername(validCommand.username())).thenReturn(false);
+    when(passwordEncoder.encode(validCommand.password())).thenReturn("encodedPassword");
     when(userPort.save(any(User.class))).thenReturn(testUser);
 
     // When
-    UserResponse response = userService.createUser(validRequest);
+    UserResult result = userService.createUser(validCommand);
 
     // Then
-    assertNotNull(response);
-    assertEquals("test@example.com", response.getEmail());
-    assertEquals("testuser", response.getUsername());
-    assertTrue(response.isActive());
+    assertNotNull(result);
+    assertEquals("test@example.com", result.email());
+    assertEquals("testuser", result.username());
+    assertTrue(result.active());
     verify(userPort, times(1)).save(any(User.class));
   }
 
@@ -78,10 +77,10 @@ class UserServiceTest {
   @DisplayName("사용자 생성 - 이메일 중복")
   void testCreateUser_DuplicateEmail() {
     // Given
-    when(userPort.existsByEmail(validRequest.getEmail())).thenReturn(true);
+    when(userPort.existsByEmail(validCommand.email())).thenReturn(true);
 
     // When & Then
-    assertThrows(BusinessException.class, () -> userService.createUser(validRequest));
+    assertThrows(BusinessException.class, () -> userService.createUser(validCommand));
   }
 
   @Test
@@ -91,12 +90,12 @@ class UserServiceTest {
     when(userPort.findById(1L)).thenReturn(java.util.Optional.of(testUser));
 
     // When
-    UserResponse response = userService.getUserById(1L);
+    UserResult result = userService.getUserById(1L);
 
     // Then
-    assertNotNull(response);
-    assertEquals(1L, response.getId());
-    assertEquals("test@example.com", response.getEmail());
+    assertNotNull(result);
+    assertEquals(1L, result.id());
+    assertEquals("test@example.com", result.email());
   }
 
   @Test
