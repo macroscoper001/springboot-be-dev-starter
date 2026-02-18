@@ -6,7 +6,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,12 +18,12 @@ public class UserPersistenceAdapter implements UserPort {
   private final UserJpaRepository userJpaRepository;
 
   @Override
-  public User save(@NonNull User user) {
+  public User save(User user) {
     return userJpaRepository.save(user);
   }
 
   @Override
-  public Optional<User> findById(@NonNull Long id) {
+  public Optional<User> findById(Long id) {
     return userJpaRepository.findById(id);
   }
 
@@ -49,12 +48,12 @@ public class UserPersistenceAdapter implements UserPort {
   }
 
   @Override
-  public Page<User> findAll(@NonNull Pageable pageable) {
+  public Page<User> findAll(Pageable pageable) {
     return userJpaRepository.findAll(pageable);
   }
 
   @Override
-  public void delete(@NonNull User user) {
+  public void delete(User user) {
     userJpaRepository.delete(user);
   }
 }

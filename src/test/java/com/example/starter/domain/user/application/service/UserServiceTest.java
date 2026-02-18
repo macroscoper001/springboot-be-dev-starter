@@ -20,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("사용자 서비스 테스트")
+@SuppressWarnings("null")
 class UserServiceTest {
 
   @Mock

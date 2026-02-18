@@ -6,7 +6,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,7 +18,7 @@ public class TodoPersistenceAdapter implements TodoPort {
   private final TodoJpaRepository todoJpaRepository;
 
   @Override
-  public Todo save(@NonNull Todo todo) {
+  public Todo save(Todo todo) {
     return todoJpaRepository.save(todo);
   }
 
@@ -39,7 +38,7 @@ public class TodoPersistenceAdapter implements TodoPort {
   }
 
   @Override
-  public void delete(@NonNull Todo todo) {
+  public void delete(Todo todo) {
     todoJpaRepository.delete(todo);
   }
 }

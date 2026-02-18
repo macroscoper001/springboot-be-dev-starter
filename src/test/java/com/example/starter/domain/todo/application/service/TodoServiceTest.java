@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("할일 서비스 테스트")
+@SuppressWarnings("null")
 class TodoServiceTest {
 
   @Mock

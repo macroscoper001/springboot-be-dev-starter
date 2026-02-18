@@ -29,6 +29,7 @@ public class GlobalExceptionHandler {
    * 입력 검증 예외 처리
    */
   @ExceptionHandler(MethodArgumentNotValidException.class)
+  @SuppressWarnings("null")
   public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException ex) {
     String message = ex.getBindingResult()
         .getFieldErrors()

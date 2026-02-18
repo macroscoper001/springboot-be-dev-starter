@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DisplayName("할일 컨트롤러 테스트")
+@SuppressWarnings("null")
 class TodoControllerTest {
 
   @Autowired
