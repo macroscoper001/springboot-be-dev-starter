@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 @Slf4j
-@SuppressWarnings("null")
 public class GlobalExceptionHandler {
 
   /**
