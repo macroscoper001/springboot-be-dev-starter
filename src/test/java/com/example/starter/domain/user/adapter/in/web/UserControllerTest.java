@@ -7,11 +7,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.example.starter.domain.user.adapter.in.web.dto.UserRequest;
-import com.example.starter.domain.user.adapter.in.web.dto.UserResponse;
 import com.example.starter.domain.user.application.port.in.CreateUserUseCase;
 import com.example.starter.domain.user.application.port.in.DeleteUserUseCase;
 import com.example.starter.domain.user.application.port.in.GetUserUseCase;
 import com.example.starter.domain.user.application.port.in.UpdateUserUseCase;
+import com.example.starter.domain.user.application.port.in.command.CreateUserCommand;
+import com.example.starter.domain.user.application.port.in.command.UserResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,20 +51,23 @@ class UserControllerTest {
   @MockBean
   private DeleteUserUseCase deleteUserUseCase;
 
-  private UserResponse testUserResponse;
+  private UserResult testUserResult;
 
   @BeforeEach
   void setUp() {
-    testUserResponse = UserResponse.builder()
-        .id(1L)
-        .email("test@example.com")
-        .username("testuser")
-        .name("테스트 사용자")
-        .active(true)
-        .build();
+    testUserResult = new UserResult(
+        1L,
+        "test@example.com",
+        "testuser",
+        "테스트 사용자",
+        true,
+        LocalDateTime.now(),
+        LocalDateTime.now()
+    );
   }
 
   @Test
+  @WithMockUser(username = "1")
   @DisplayName("사용자 생성 - 성공")
   void testCreateUser_Success() throws Exception {
     // Given
@@ -73,7 +78,7 @@ class UserControllerTest {
         .name("테스트 사용자")
         .build();
 
-    when(createUserUseCase.createUser(any(UserRequest.class))).thenReturn(testUserResponse);
+    when(createUserUseCase.createUser(any(CreateUserCommand.class))).thenReturn(testUserResult);
 
     // When & Then
     mockMvc.perform(post("/api/v1/users")
@@ -82,14 +87,15 @@ class UserControllerTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.success", notNullValue()));
 
-    verify(createUserUseCase, times(1)).createUser(any(UserRequest.class));
+    verify(createUserUseCase, times(1)).createUser(any(CreateUserCommand.class));
   }
 
   @Test
+  @WithMockUser(username = "1")
   @DisplayName("사용자 조회 - 성공")
   void testGetUserById_Success() throws Exception {
     // Given
-    when(getUserUseCase.getUserById(1L)).thenReturn(testUserResponse);
+    when(getUserUseCase.getUserById(1L)).thenReturn(testUserResult);
 
     // When & Then
     mockMvc.perform(get("/api/v1/users/1")
