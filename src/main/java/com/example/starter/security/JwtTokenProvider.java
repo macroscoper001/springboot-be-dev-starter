@@ -5,7 +5,6 @@ import com.example.starter.common.exception.ErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
@@ -51,7 +50,7 @@ public class JwtTokenProvider {
         .subject(userId)
         .issuedAt(now)
         .expiration(expiryDate)
-        .signWith(key, SignatureAlgorithm.HS256)
+        .signWith(key, Jwts.SIG.HS256)
         .compact();
   }
 

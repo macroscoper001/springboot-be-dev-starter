@@ -67,7 +67,7 @@ public class AuthService implements LoginUseCase, RefreshTokenUseCase {
     String userId = jwtTokenProvider.getUserIdFromToken(command.refreshToken());
 
     // 사용자 존재 여부 확인
-    User user = userPort.findById(Long.parseLong(userId))
+    userPort.findById(Long.parseLong(userId))
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     // 새 토큰 생성

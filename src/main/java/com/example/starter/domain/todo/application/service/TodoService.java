@@ -12,7 +12,6 @@ import com.example.starter.domain.todo.application.port.in.command.TodoResult;
 import com.example.starter.domain.todo.application.port.in.command.UpdateTodoCommand;
 import com.example.starter.domain.todo.application.port.out.TodoPort;
 import com.example.starter.domain.todo.domain.Todo;
-import com.example.starter.domain.todo.domain.TodoStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
